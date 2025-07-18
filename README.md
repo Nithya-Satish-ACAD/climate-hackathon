@@ -166,17 +166,6 @@ This will run several scenarios and print pass/fail results for each.
 
 ---
 
-## Demo Video
-
-*Coming soon!*
-
-<!--
-Insert a link to your demo video here, e.g.:
-[![Watch the demo](demo_screenshot.png)](https://your-demo-video-link)
--->
-
----
-
 ## Screenshots
 
 Below are the screenshots of the Home and Battery agents sending the information to the Grid
