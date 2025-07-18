@@ -179,9 +179,17 @@ Insert a link to your demo video here, e.g.:
 
 ## Screenshots
 
-*Coming soon!*
+Below are the screenshots of the Home and Battery agents sending the information to the Grid
+and the Grid Agent receiving the information, making the curtailment plan and sending it back to the relavant entities.
 
-<!--
+<img width="500" height="300" alt="Screenshot (535)" src="https://github.com/user-attachments/assets/06694ea6-2563-4e14-b843-3c313844bda6" />
+<img width="500" height="300" alt="Screenshot (533)" src="https://github.com/user-attachments/assets/a141aa6d-0438-4d49-b707-1abff92c5075" />
+<img width="500" height="300" alt="Screenshot (536)" src="https://github.com/user-attachments/assets/e11ade8c-fc2a-4295-8431-97e1f8bd58b7" />
+<img width="500" height="300" alt="Screenshot (534)" src="https://github.com/user-attachments/assets/7fea5b06-b05f-41e1-bf3a-3590e4dda6d4" />
+
+
+<!--<img width="944" height="575" alt="Screenshot (533)" src="https://github.com/user-attachments/assets/683f64b0-695d-4a00-98c8-7b990be9cf5a" />
+
 Insert screenshots of the running system, logs, or UI here.
 Example:
 ![Grid Agent Output](screenshots/grid_agent_output.png)
