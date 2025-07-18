@@ -1,158 +1,189 @@
 # Distributed Energy Management Simulation
 
-This project implements a distributed multi-agent energy management system where each agent runs as an independent HTTP server, communicating via REST APIs for a more realistic distributed simulation.
+This project implements a distributed, multi-agent energy management system for smart grids. Each agent runs as an independent FastAPI server and communicates via REST APIs, simulating a realistic distributed energy scenario.
+
+---
+
+## Table of Contents
+- [Architecture](#architecture)
+- [Features](#features)
+- [Setup & Installation](#setup--installation)
+- [Running the Simulation](#running-the-simulation)
+- [API Endpoints](#api-endpoints)
+- [Simulation Flow & Anomaly Logic](#simulation-flow--anomaly-logic)
+- [Testing](#testing)
+- [Logging](#logging)
+- [Troubleshooting](#troubleshooting)
+- [Extending the System](#extending-the-system)
+- [Demo Video](#demo-video)
+- [Screenshots](#screenshots)
+
+---
 
 ## Architecture
 
-The system consists of three main agents:
+The system consists of three main agent types:
 
-1. **Grid Agent** (Port 8000) - Coordinates the entire system and makes curtailment decisions
-2. **Home Agent** (Port 8001) - Manages home energy systems (solar, loads, batteries)
-3. **Battery Agent** (Port 8002) - Manages battery storage systems
+1. **Grid Agent** (Port 8000): Coordinates the system, collects status, detects anomalies, and issues curtailment commands.
+2. **Home Agent** (Port 8001, 8002, ...): Simulates a smart home with solar, loads, and batteries. Detects local anomalies and reports them.
+3. **Battery Agent** (Port 8004, 8005, ...): Manages battery storage systems.
+
+Agents communicate via HTTP REST APIs. Each agent can be run independently, allowing for distributed deployment.
+
+---
 
 ## Features
+- **Distributed, modular architecture** (each agent is a server)
+- **AI-powered decision making** (OpenAI GPT-3.5-turbo)
+- **Real-time anomaly detection and curtailment**
+- **Scenario-based simulation and testing**
+- **Comprehensive logging**
+- **Easy extensibility for new agent/module types**
 
-- **Distributed Architecture**: Each agent runs as an independent FastAPI server
-- **HTTP Communication**: Agents communicate via REST APIs
-- **AI-Powered Decisions**: Uses OpenAI GPT-3.5-turbo for intelligent decision making
-- **Real-time Coordination**: Grid agent coordinates all other agents
-- **Curtailment Planning**: Intelligent load and solar curtailment based on demand/supply
-- **Health Monitoring**: Each agent provides health check endpoints
-- **Logging**: Comprehensive logging of all operations
+---
 
-## Installation
+## Setup & Installation
 
-1. Install dependencies:
-```bash
-pip install -r requirements.txt
-```
+1. **Clone the repository:**
+   ```bash
+   git clone <your-repo-url>
+   cd climate-hackathon
+   ```
+2. **Install dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+3. **Prepare data files:**
+   - Place `data/historical_data.csv` and `data/battery_historical_data.csv` in the `data/` directory.
+4. **Set API keys:**
+   - Set your OpenAI and OpenWeatherMap API keys in a `.env` file or as environment variables.
 
-2. Ensure you have the required CSV files:
-   - `historical_data.csv` - for home agent
-   - `battery_historical_data.csv` - for battery agent
+---
 
 ## Running the Simulation
 
 ### Option 1: Run All Agents Together (Recommended)
-
 Use the coordinator script to start all agents and run the simulation:
-
 ```bash
-python run_distributed_simulation.py
+python scripts/run_distributed_simulation.py
 ```
-
-This will:
-- Start all three agent servers
-- Run 3 simulation cycles
-- Display results and status
-- Keep running until you press Ctrl+C
 
 ### Option 2: Run Agents Individually
+Open separate terminals for each agent:
 
-You can also run each agent separately in different terminals:
-
-**Terminal 1 - Grid Agent:**
+**Grid Agent:**
 ```bash
-python grid_agent_server.py
+python agents/grid_agent/server.py --port 8000
+```
+**Home Agents:**
+```bash
+python agents/home_agent/server.py --id home_1 --port 8001 --transformer transformer_A
+python agents/home_agent/server.py --id home_2 --port 8002 --transformer transformer_A
+python agents/home_agent/server.py --id home_3 --port 8003 --transformer transformer_B
+```
+**Battery Agents:**
+```bash
+python agents/battery_agent/server.py --id battery_agent_1 --port 8004 --transformer transformer_A
+python agents/battery_agent/server.py --id battery_agent_2 --port 8005 --transformer transformer_B
 ```
 
-**Terminal 2 - Home Agent:**
-```bash
-python home_agent_server.py
-```
-
-**Terminal 3 - Battery Agent:**
-```bash
-python battery_agent_server.py
-```
+---
 
 ## API Endpoints
 
 ### Grid Agent (http://localhost:8000)
-- `GET /` - Server info
-- `GET /status` - Current transformer status
-- `POST /coordinate` - Run grid coordination
-- `GET /agents` - List agent endpoints
-- `POST /agents/{agent_id}/status` - Receive agent status
-- `GET /health` - Health check
+- `GET /` — Server info
+- `GET /status` — Current transformer status
+- `POST /coordinate` — Run grid coordination
+- `GET /agents` — List agent endpoints
+- `POST /agents/{agent_id}/status` — Receive agent status
+- `GET /health` — Health check
 
-### Home Agent (http://localhost:8001)
-- `GET /` - Server info
-- `GET /status` - Current module status
-- `POST /simulate` - Run simulation cycle
-- `POST /curtail` - Apply curtailment
-- `GET /health` - Health check
+### Home Agent (http://localhost:8001, 8002, ...)
+- `GET /` — Server info
+- `GET /status` — Current module status
+- `POST /simulate` — Run simulation cycle (accepts scenario for testing)
+- `POST /curtail` — Apply curtailment
+- `GET /health` — Health check
 
-### Battery Agent (http://localhost:8002)
-- `GET /` - Server info
-- `GET /status` - Current battery status
-- `POST /simulate` - Run simulation cycle
-- `POST /curtail` - Apply curtailment
-- `GET /health` - Health check
+### Battery Agent (http://localhost:8004, 8005, ...)
+- `GET /` — Server info
+- `GET /status` — Current battery status
+- `POST /simulate` — Run simulation cycle
+- `POST /curtail` — Apply curtailment
+- `GET /health` — Health check
 
-## Simulation Flow
+---
 
-1. **Initialization**: All agents start and register with the grid agent
-2. **Status Collection**: Grid agent collects status from all agents
-3. **Anomaly Detection**: Grid agent detects generation-demand imbalances
-4. **Curtailment Planning**: AI generates curtailment plans if needed
-5. **Action Execution**: Curtailment actions are sent to respective agents
-6. **Logging**: All actions are logged for analysis
+## Simulation Flow & Anomaly Logic
 
-## Configuration
+1. **Initialization:** All agents start and register with the grid agent.
+2. **Status Collection:** Grid agent collects status from all agents.
+3. **Anomaly Detection:**
+   - **Home agents** compute and report an `anomaly` field (`True` if generation < demand or generation > demand).
+   - **Grid agent** acts only on the anomaly field reported by home agents.
+4. **Curtailment Planning:** If an anomaly is detected, the grid agent uses AI to generate a curtailment plan (prioritizing loads, then solar, then batteries).
+5. **Action Execution:** Curtailment actions are sent to respective agents.
+6. **Logging:** All actions and status pings are logged for analysis.
 
-Key configuration parameters can be modified in each agent file:
+---
 
-- **API Keys**: OpenAI and OpenWeatherMap API keys
-- **Ports**: Server ports for each agent
-- **Agent IDs**: Unique identifiers for each agent
-- **Transformer IDs**: Grid transformer assignments
+## Testing
+
+To run the scenario-based test script (make sure all agents are running):
+```bash
+python tests/test_grid_flows.py
+```
+This will run several scenarios and print pass/fail results for each.
+
+---
 
 ## Logging
+- Each agent writes logs to the `logs/` directory (e.g., `home_1_log.csv`, `grid_agent_log.csv`).
+- Logs include timestamps, status pings, and curtailment actions.
 
-Each agent creates its own log file:
-- `home_1_log.csv` - Home agent logs
-- `battery_agent_1_log.csv` - Battery agent logs
-- `grid_agent_log.csv` - Grid agent logs
+---
 
 ## Troubleshooting
+- **500 Internal Server Error:** Check agent logs for stack traces (often due to missing required fields or misconfiguration).
+- **Port Already in Use:** Make sure the required ports are free.
+- **API Key Issues:** Ensure your API keys are set correctly.
+- **Missing Data Files:** Ensure all required CSV files are present in the `data/` directory.
 
-### Common Issues
-
-1. **Port Already in Use**: Make sure ports 8000, 8001, and 8002 are available
-2. **API Key Issues**: Verify your OpenAI API key is valid
-3. **Missing CSV Files**: Ensure historical data files exist
-4. **Network Issues**: Check if localhost is accessible
-
-### Debug Mode
-
-To see detailed logs, check the console output of each agent server. The coordinator script provides a summary of all operations.
+---
 
 ## Extending the System
 
 ### Adding New Agents
-
-1. Create a new agent server file (e.g., `new_agent_server.py`)
-2. Implement the required endpoints (`/status`, `/simulate`, `/curtail`, `/health`)
-3. Update the coordinator configuration in `run_distributed_simulation.py`
-4. Add the agent endpoint to the grid agent configuration
+1. Create a new agent server (see `agents/` for examples).
+2. Implement required endpoints (`/status`, `/simulate`, `/curtail`, `/health`).
+3. Register the agent with the grid agent (update config or CLI args).
 
 ### Adding New Module Types
+1. Create new module classes (e.g., `WindModule`).
+2. Update Pydantic models for API serialization.
+3. Implement required methods (e.g., `status()`).
 
-1. Create new module classes (similar to `BatteryModule`, `SolarModule`, `LoadModule`)
-2. Update the Pydantic models for API serialization
-3. Implement the required methods (`status()`, etc.)
+---
 
-## Performance Considerations
+## Demo Video
 
-- The simulation runs with realistic timing (5-second intervals between cycles)
-- Each agent operates independently, allowing for true distributed operation
-- HTTP communication adds realistic network latency
-- All operations are logged for performance analysis
+*Coming soon!*
 
-## Security Notes
+<!--
+Insert a link to your demo video here, e.g.:
+[![Watch the demo](demo_screenshot.png)](https://your-demo-video-link)
+-->
 
-- This is a development/demo system
-- API keys are hardcoded for simplicity
-- In production, use environment variables for sensitive data
-- Consider adding authentication for agent communication 
+---
+
+## Screenshots
+
+*Coming soon!*
+
+<!--
+Insert screenshots of the running system, logs, or UI here.
+Example:
+![Grid Agent Output](screenshots/grid_agent_output.png)
+![Home Agent Log](screenshots/home_agent_log.png)
+--> 
