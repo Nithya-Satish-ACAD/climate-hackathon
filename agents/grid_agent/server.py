@@ -91,6 +91,7 @@ class AgentStatus(BaseModel):
     battery_agent_id: Optional[str] = None
     transformer_id: str
     modules: List[ModuleStatus]
+    anomaly: Optional[bool] = None
 
 class CurtailmentAction(BaseModel):
     type: str  # "load" or "solar"
@@ -124,16 +125,21 @@ class Transformer:
         self.agents[agent_id] = status
     
     def detect_anomaly(self):
+        # Use the anomaly field from each agent's status, if present
+        any_anomaly = False
         total_generation = 0
         total_demand = 0
         for agent_status in self.agents.values():
+            # Use anomaly field if present
+            if 'anomaly' in agent_status and agent_status['anomaly']:
+                any_anomaly = True
+            # Still sum for logging/visibility
             for module in agent_status.get("modules", []):
                 if module["type"] == "solar":
                     total_generation += module.get("predicted_generation", 0) or 0
                 if module["type"] == "load":
                     total_demand += module.get("predicted_demand", 0) or 0
-        anomaly = total_generation < total_demand
-        return anomaly, total_generation, total_demand
+        return any_anomaly, total_generation, total_demand
     
     def plan_curtailment(self, curtail_loads_only=False):
         prompt = f"""

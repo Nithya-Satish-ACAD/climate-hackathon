@@ -84,6 +84,7 @@ class StatusPing(BaseModel):
     home_agent_id: str
     transformer_id: str
     modules: List[ModuleStatus]
+    anomaly: bool
 
 class CurtailmentRequest(BaseModel):
     curtailment_kw: float
@@ -241,6 +242,11 @@ class HomeAgent:
             result = predict_with_openai(prompt, self.openai_api_key)
             battery.available = "true" in result.lower()
 
+        # Calculate total predicted generation and demand
+        total_predicted_generation = sum(s.predicted_generation or 0 for s in self.solars)
+        total_predicted_demand = sum(l.predicted_demand or 0 for l in self.loads)
+        anomaly = total_predicted_generation < total_predicted_demand or total_predicted_generation > total_predicted_demand
+
         # Create status ping
         modules_status = [b.status() for b in self.batteries] + \
                          [s.status() for s in self.solars] + \
@@ -249,7 +255,8 @@ class HomeAgent:
         status_ping = StatusPing(
             home_agent_id=self.home_agent_id,
             transformer_id=self.transformer_id,
-            modules=modules_status
+            modules=modules_status,
+            anomaly=anomaly
         )
         
         print("Status Ping:", status_ping.model_dump())
@@ -372,6 +379,10 @@ async def run_simulation(request: Request, scenario: int = Query(None)):
                 battery.soc = 0.7
                 battery.available_to_charge = 0.2
                 battery.available = True
+        # Calculate anomaly for test scenarios
+        total_predicted_generation = sum(s.predicted_generation or 0 for s in home_agent.solars)
+        total_predicted_demand = sum(l.predicted_demand or 0 for l in home_agent.loads)
+        anomaly = total_predicted_generation < total_predicted_demand or total_predicted_generation > total_predicted_demand
         # Skip normal simulation logic, just return status
         modules_status = [b.status() for b in home_agent.batteries] + \
                          [s.status() for s in home_agent.solars] + \
@@ -379,7 +390,8 @@ async def run_simulation(request: Request, scenario: int = Query(None)):
         status_ping = StatusPing(
             home_agent_id=home_agent.home_agent_id,
             transformer_id=home_agent.transformer_id,
-            modules=modules_status
+            modules=modules_status,
+            anomaly=anomaly
         )
         return status_ping
     # Normal simulation
